@@ -1,0 +1,99 @@
+# ── Environment & Secrets ──────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# ── Virtual Environment ───────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+.env/
+pipenv/
+
+# ── AI Model Cache (BLIP + CLIP — can be GBs in size) ────────────────────────
+.cache/
+~/.cache/huggingface/
+huggingface/
+models/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# ── Node / React Frontend ─────────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.next/
+out/
+.nuxt/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ── Frontend env files ────────────────────────────────────────────────────────
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+
+# ── IDEs & Editors ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+log/
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+.tox/
+
+# ── Uploads / Temp files ──────────────────────────────────────────────────────
+uploads/
+tmp/
+temp/
+*.tmp
+
+# ── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
