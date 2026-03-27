@@ -10,13 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from services.pinecone_service import init_pinecone_index
-from services.mongodb_service import users_col, images_col, folders_col  # triggers index creation
+from services.mongodb_service import users_col, images_col, folders_col
 
 from routes.auth_routes import router as auth_router
 from routes.image_routes import router as image_router
 from routes.folder_routes import router as folder_router
 from routes.search_routes import router as search_router
 from routes.recycle_routes import router as recycle_router
+from routes.chat_routes import router as chat_router
 
 
 @asynccontextmanager
@@ -25,7 +26,6 @@ async def lifespan(app: FastAPI):
     print("[Startup] Initialising Pinecone index...")
     init_pinecone_index()
 
-    # Pre-load AI models so the first upload request isn't slow
     print("[Startup] Pre-loading BLIP model...")
     from services.blip_service import _load as blip_load
     blip_load()
@@ -62,6 +62,7 @@ app.include_router(image_router,   prefix="/api")
 app.include_router(folder_router,  prefix="/api")
 app.include_router(search_router,  prefix="/api")
 app.include_router(recycle_router, prefix="/api")
+app.include_router(chat_router,    prefix="/api")
 
 
 @app.get("/")

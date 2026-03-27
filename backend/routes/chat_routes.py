@@ -1,13 +1,27 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from pydantic import BaseModel
-from typing import Optional
+# Standard library
 import json
+from typing import Optional
 
-from services.gemini_service import (
+# FastAPI
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+
+# Pydantic
+from pydantic import BaseModel
+
+# Internal — auth & services
+from backend.middleware.auth_middleware import get_current_user
+from backend.services.clip_service import get_text_embedding
+from backend.services.pinecone_service import query_vectors
+from backend.services.gemini_service import (
     answer_image_question,
     rag_chat,
     semantic_search_query_expansion,
 )
+
+# MongoDB (used inline inside the route, but better to import at the top)
+from bson import ObjectId
+from backend.services.mongodb_service import images_col
+
 # Import your existing pinecone search function — adjust import path as needed
 # from services.pinecone_service import search_similar_images
 
@@ -26,41 +40,51 @@ class TextChatRequest(BaseModel):
 
 
 @router.post("/text")
-async def text_chat(request: TextChatRequest):
-    """
-    Semantic search chat — user types a query, we search Pinecone and reply via Gemini.
-    Optionally focused on a specific image_id.
-    """
+async def text_chat(
+    request: TextChatRequest,
+    user_id: str = Depends(get_current_user),
+):
     try:
-        # 1. Expand query for better vector search
         expanded_query = await semantic_search_query_expansion_async(request.query)
 
-        # 2. Search Pinecone — uncomment and adapt to your pinecone_service
-        # pinecone_results = search_similar_images(expanded_query, top_k=5, image_id=request.image_id)
-        pinecone_results = []  # placeholder — replace with real search
+        embedding = get_text_embedding(expanded_query)
+        raw_matches = query_vectors(embedding=embedding, user_id=user_id)
 
-        # 3. Format history
+        # Fetch full image docs from MongoDB to build context
+        from services.mongodb_service import images_col
+        from bson import ObjectId
+        pinecone_results = []
+        for match in raw_matches[:5]:
+            doc = images_col.find_one({"_id": ObjectId(match["image_id"]), "deleted": False})
+            if doc:
+                pinecone_results.append({
+                    "image_id": match["image_id"],
+                    "score": match["score"],
+                    "description": doc.get("ai_description", ""),
+                    "filename": doc.get("image_url", ""),
+                    "tags": [],
+                })
+
         history = [{"role": m.role, "content": m.content} for m in (request.history or [])]
-
-        # 4. Generate Gemini response
         answer = rag_chat(
             user_query=request.query,
             pinecone_chunks=pinecone_results,
             chat_history=history,
         )
-
         return {"answer": answer, "sources": pinecone_results[:3]}
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.post("/image")
 async def image_chat(
     question: str = Form(...),
     image: UploadFile = File(...),
-    history: str = Form(default="[]"),  # JSON string of chat history
+    history: str = Form(default="[]"),
+    user_id: str = Depends(get_current_user),
 ):
+
     """
     Image-specific chat — user uploads or references an image and asks a question.
     Returns Gemini's detailed answer (breed, species, location, etc.)
@@ -87,7 +111,9 @@ async def image_rag_chat(
     question: str = Form(...),
     image: Optional[UploadFile] = File(default=None),
     history: str = Form(default="[]"),
+    user_id: str = Depends(get_current_user),
 ):
+
     """
     Full RAG chat with optional image context.
     Searches Pinecone + uses image if provided + generates Gemini answer.

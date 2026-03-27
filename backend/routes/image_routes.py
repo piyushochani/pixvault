@@ -1,13 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import JSONResponse
 from bson import ObjectId
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import Optional
 
 from middleware.auth_middleware import get_current_user
 from services.mongodb_service import images_col
-from services.cloudinary_service import upload_image, delete_image
-from services.pinecone_service import upsert_vector, delete_vector
+from services.cloudinary_service import upload_image
+from services.pinecone_service import upsert_vector
 from services.ai_pipeline import process_uploaded_image
 from models.image_model import UpdateDescriptionRequest, MoveToFolderRequest
 from utils.prompt_utils import sanitise_user_description, build_empty_library_response
@@ -40,14 +39,11 @@ async def upload(
     if len(image_bytes) > MAX_FILE_SIZE:
         raise HTTPException(400, "File too large. Maximum size is 10 MB.")
 
-    # Sanitise user description at input
     clean_desc = sanitise_user_description(user_description or "")
 
-    # Upload to Cloudinary
     image_id = str(ObjectId())
     cloud_result = upload_image(image_bytes, public_id=image_id)
 
-    # Run AI pipeline (BLIP caption + CLIP embedding)
     ai_result = process_uploaded_image(image_bytes)
 
     doc = {
@@ -64,7 +60,6 @@ async def upload(
     }
     images_col.insert_one(doc)
 
-    # Store embedding in Pinecone (only if AI processing succeeded)
     if ai_result["ai_ok"] and ai_result["embedding"]:
         upsert_vector(
             image_id=image_id,
@@ -79,7 +74,7 @@ async def upload(
     return _serialize(doc)
 
 
-# ── List all active images for user ──────────────────────────────────────────
+# ── List all active images ────────────────────────────────────────────────────
 @router.get("/")
 def list_images(
     sort: str = "desc",
@@ -98,7 +93,8 @@ def list_images(
     return {"results": [_serialize(d) for d in docs], "count": len(docs)}
 
 
-# ── Recent 10 images for overview ────────────────────────────────────────────
+# ── Recent 10 images for overview ─────────────────────────────────────────────
+# ⚠️ MUST be before /{image_id} to avoid route conflict
 @router.get("/recent")
 def recent_images(user_id: str = Depends(get_current_user)):
     docs = list(
@@ -114,7 +110,17 @@ def recent_images(user_id: str = Depends(get_current_user)):
     return {"results": [_serialize(d) for d in docs], "count": len(docs)}
 
 
-# ── Single image ─────────────────────────────────────────────────────────────
+# ── Overview stats ─────────────────────────────────────────────────────────────
+# ⚠️ MUST be before /{image_id} to avoid route conflict
+@router.get("/stats/overview")
+def overview(user_id: str = Depends(get_current_user)):
+    total_images = images_col.count_documents(
+        {"user_id": ObjectId(user_id), "deleted": False}
+    )
+    return {"total_images": total_images}
+
+
+# ── Single image ──────────────────────────────────────────────────────────────
 @router.get("/{image_id}")
 def get_image(image_id: str, user_id: str = Depends(get_current_user)):
     doc = images_col.find_one(
@@ -170,48 +176,3 @@ def soft_delete(image_id: str, user_id: str = Depends(get_current_user)):
     if result.matched_count == 0:
         raise HTTPException(404, "Image not found.")
     return {"message": "Image moved to recycle bin. It will be permanently deleted after 24 hours."}
-
-
-# ── Recycle bin: list ─────────────────────────────────────────────────────────
-@router.get("/recycle/bin")
-def recycle_bin(user_id: str = Depends(get_current_user)):
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-    # Auto-purge images older than 24 hrs from DB + Cloudinary + Pinecone
-    expired = list(
-        images_col.find(
-            {"user_id": ObjectId(user_id), "deleted": True, "deleted_at": {"$lt": cutoff}}
-        )
-    )
-    for img in expired:
-        delete_image(img["cloudinary_public_id"])
-        delete_vector(str(img["_id"]))
-        images_col.delete_one({"_id": img["_id"]})
-
-    docs = list(
-        images_col.find(
-            {"user_id": ObjectId(user_id), "deleted": True, "deleted_at": {"$gte": cutoff}},
-            sort=[("deleted_at", -1)],
-        )
-    )
-    return {"results": [_serialize(d) for d in docs], "count": len(docs)}
-
-
-# ── Restore from recycle bin ──────────────────────────────────────────────────
-@router.patch("/{image_id}/restore")
-def restore(image_id: str, user_id: str = Depends(get_current_user)):
-    result = images_col.update_one(
-        {"_id": ObjectId(image_id), "user_id": ObjectId(user_id), "deleted": True},
-        {"$set": {"deleted": False, "deleted_at": None}},
-    )
-    if result.matched_count == 0:
-        raise HTTPException(404, "Image not found in recycle bin.")
-    return {"message": "Image restored successfully."}
-
-
-# ── Overview stats ────────────────────────────────────────────────────────────
-@router.get("/stats/overview")
-def overview(user_id: str = Depends(get_current_user)):
-    total_images = images_col.count_documents(
-        {"user_id": ObjectId(user_id), "deleted": False}
-    )
-    return {"total_images": total_images}

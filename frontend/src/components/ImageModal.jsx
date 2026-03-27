@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, Download, Trash2, Pencil, Check, Loader2, FolderOpen } from "lucide-react";
 import { imageModel } from "../models/imageModel";
-import { folderModel } from "../models/Foldermodel";
+import { folderModel } from "./models/Foldermodel";
 import { downloadImage, formatDate, getErrorMessage } from "../utils/helpers";
 
 /**
