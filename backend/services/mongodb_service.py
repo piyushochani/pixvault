@@ -1,7 +1,13 @@
 from pymongo import MongoClient
 from config import MONGO_URI
 
-client = MongoClient(MONGO_URI)
+try:
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+    client.admin.command("ping")  # Test connection
+    print("✅ MongoDB connected successfully!")
+except Exception as e:
+    print(f"❌ MongoDB connection failed: {e}")
+
 db = client["pixvault"]
 
 users_col = db["users"]

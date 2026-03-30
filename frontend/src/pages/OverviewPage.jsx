@@ -1,166 +1,85 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Images, FolderOpen, ArrowRight, Upload, Loader2 } from "lucide-react";
-import { imageModel } from "../models/imageModel";
-import { folderModel } from "./models/Foldermodel";
-import { imageModel as imgApi } from "../models/imageModel";
-import ImageCard from "../components/ImageCard";
-import ImageModal from "../components/ImageModal";
-import UploadZone from "../components/UploadZone";
-import { getErrorMessage } from "../utils/helpers";
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getStats, recentImages } from '../api/images'
+import { listFolders } from '../api/folders'
+import ImageCard from '../components/ImageCard'
+import ImageModal from '../components/ImageModal'
+import ChatBot from '../components/ChatBot'
 
 export default function OverviewPage() {
-  const [stats, setStats]         = useState({ total_images: 0 });
-  const [folderCount, setFolderCount] = useState(0);
-  const [recent, setRecent]       = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
-  const [selected, setSelected]   = useState(null);
-  const [showUpload, setShowUpload] = useState(false);
+  const [stats, setStats]       = useState({ total_images: 0 })
+  const [folders, setFolders]   = useState([])
+  const [recent, setRecent]     = useState([])
+  const [selected, setSelected] = useState(null)
+  const navigate = useNavigate()
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const [statsData, recentData, foldersData] = await Promise.all([
-        imageModel.stats(),
-        imageModel.recent(),
-        folderModel.list(),
-      ]);
-      setStats(statsData);
-      setRecent(recentData.results || []);
-      setFolderCount(foldersData.count || 0);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => {
+    getStats().then((r) => setStats(r.data))
+    listFolders().then((r) => setFolders(r.data.folders || []))
+    recentImages().then((r) => setRecent(r.data.results || []))
+  }, [])
 
-  useEffect(() => { load(); }, []);
-
-  function handleUploaded(newImages) {
-    setShowUpload(false);
-    load();
-  }
-
-  function handleDeleted(id) {
-    setRecent((prev) => prev.filter((img) => img.id !== id));
-    setStats((prev) => ({ ...prev, total_images: Math.max(0, prev.total_images - 1) }));
-    setSelected(null);
-  }
-
-  function handleUpdated(updated) {
-    setRecent((prev) => prev.map((img) => img.id === updated.id ? updated : img));
-    setSelected(updated);
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-brand-500" />
-      </div>
-    );
-  }
+  const handleDeleted = (id) => setRecent((prev) => prev.filter((img) => img.id !== id))
+  const handleUpdated = (updated) => setRecent((prev) => prev.map((img) => img.id === updated.id ? updated : img))
 
   return (
-    <div className="space-y-8">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
-          <p className="text-gray-500 text-sm mt-1">Your image library at a glance.</p>
-        </div>
-        <button
-          onClick={() => setShowUpload((v) => !v)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Upload size={16} />
-          Upload images
-        </button>
+    <div className="flex flex-col gap-8">
+      {/* Page heading */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">Overview</h1>
+        <p className="text-white/40 text-sm mt-1">Welcome back to PixVault.</p>
       </div>
 
-      {/* Upload zone */}
-      {showUpload && (
-        <div className="card p-6">
-          <h2 className="font-semibold text-gray-800 mb-4">Upload new images</h2>
-          <UploadZone onUploaded={handleUploaded} />
-        </div>
-      )}
-
-      {error && (
-        <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
-          {error}
-        </p>
-      )}
-
-      {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="card p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center">
-            <Images size={22} className="text-brand-500" />
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {[
+          { label: 'Total Images',  value: stats.total_images, icon: '🖼️' },
+          { label: 'Total Folders', value: folders.length,     icon: '📁' },
+          { label: 'Recent Uploads',value: recent.length,      icon: '🕐' },
+        ].map((s) => (
+          <div key={s.label} className="bg-[#111] border border-white/10 rounded-xl p-5 flex items-center gap-4">
+            <span className="text-3xl">{s.icon}</span>
+            <div>
+              <p className="text-2xl font-bold text-white">{s.value}</p>
+              <p className="text-xs text-white/40">{s.label}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-3xl font-bold text-gray-900">{stats.total_images}</p>
-            <p className="text-sm text-gray-500 mt-0.5">Total images</p>
-          </div>
-        </div>
-        <div className="card p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
-            <FolderOpen size={22} className="text-purple-500" />
-          </div>
-          <div>
-            <p className="text-3xl font-bold text-gray-900">{folderCount}</p>
-            <p className="text-sm text-gray-500 mt-0.5">Folders</p>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Recent images */}
       <div>
-        <h2 className="font-semibold text-gray-800 mb-4">Recent uploads</h2>
-
-        {recent.length === 0 ? (
-          <div className="card p-12 text-center">
-            <Images size={40} className="text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">No images yet</p>
-            <p className="text-gray-400 text-sm mt-1">Upload your first image to get started.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {recent.map((img) => (
-              <ImageCard
-                key={img.id}
-                image={img}
-                onClick={() => setSelected(img)}
-                onDelete={async (id) => {
-                  await imageModel.delete(id);
-                  handleDeleted(id);
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        {recent.length > 0 && (
-          <div className="mt-6 text-center">
-            <Link
-              to="/images"
-              className="inline-flex items-center gap-2 text-brand-500 hover:text-brand-600 font-medium text-sm transition-colors"
-            >
-              See all images <ArrowRight size={15} />
-            </Link>
-          </div>
-        )}
+        <h2 className="text-lg font-semibold text-white mb-4">Recent Images</h2>
+        {recent.length === 0
+          ? <p className="text-white/40 text-sm">No images yet. Upload your first photo!</p>
+          : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {recent.map((img) => (
+                <ImageCard key={img.id} image={img} onClick={setSelected} onDeleted={handleDeleted} />
+              ))}
+            </div>
+          )
+        }
       </div>
 
-      {/* Modal */}
-      <ImageModal
-        image={selected}
-        onClose={() => setSelected(null)}
-        onDeleted={handleDeleted}
-        onUpdated={handleUpdated}
-      />
+      {/* See all button */}
+      <button
+        onClick={() => navigate('/images')}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition"
+      >
+        See All Images →
+      </button>
+
+      {selected && (
+        <ImageModal
+          image={selected}
+          onClose={() => setSelected(null)}
+          onDeleted={handleDeleted}
+          onUpdated={handleUpdated}
+        />
+      )}
+
+      <ChatBot />
     </div>
-  );
+  )
 }

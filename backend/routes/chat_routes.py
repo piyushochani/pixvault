@@ -9,10 +9,10 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 # Internal — auth & services
-from backend.middleware.auth_middleware import get_current_user
-from backend.services.clip_service import get_text_embedding
-from backend.services.pinecone_service import query_vectors
-from backend.services.gemini_service import (
+from middleware.auth_middleware import get_current_user
+from services.clip_service import get_text_embedding
+from services.pinecone_service import query_vectors
+from services.gemini_service import (
     answer_image_question,
     rag_chat,
     semantic_search_query_expansion,
@@ -20,7 +20,7 @@ from backend.services.gemini_service import (
 
 # MongoDB (used inline inside the route, but better to import at the top)
 from bson import ObjectId
-from backend.services.mongodb_service import images_col
+from services.mongodb_service import images_col
 
 # Import your existing pinecone search function — adjust import path as needed
 # from services.pinecone_service import search_similar_images

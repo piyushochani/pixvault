@@ -1,134 +1,79 @@
-import { useState } from "react";
-import { FolderOpen, Pencil, Trash2, Check, X, Loader2 } from "lucide-react";
-import { folderModel } from "./models/Foldermodel";
-import { getErrorMessage } from "../utils/helpers";
+import { useState } from 'react'
+import { renameFolder, deleteFolder } from '../api/folders'
+import { useNavigate } from 'react-router-dom'
 
-/**
- * FolderCard
- * ----------
- * Props:
- *   folder        — { id, name, image_count, created_at }
- *   onClick()     — open folder to view its images
- *   onRenamed(id, newName)
- *   onDeleted(id)
- */
-export default function FolderCard({ folder, onClick, onRenamed, onDeleted }) {
-  const [renaming, setRenaming]   = useState(false);
-  const [newName, setNewName]     = useState(folder.name);
-  const [saving, setSaving]       = useState(false);
-  const [deleting, setDeleting]   = useState(false);
-  const [error, setError]         = useState(null);
+export default function FolderCard({ folder, onDeleted, onRenamed }) {
+  const [editing, setEditing]   = useState(false)
+  const [name, setName]         = useState(folder.name)
+  const [loading, setLoading]   = useState(false)
+  const navigate = useNavigate()
 
-  async function handleRename() {
-    const trimmed = newName.trim();
-    if (!trimmed || trimmed === folder.name) { setRenaming(false); return; }
-    setSaving(true);
-    setError(null);
+  const handleRename = async () => {
+    if (!name.trim()) return
+    setLoading(true)
     try {
-      await folderModel.rename(folder.id, trimmed);
-      onRenamed(folder.id, trimmed);
-      setRenaming(false);
-    } catch (err) {
-      setError(getErrorMessage(err));
+      await renameFolder(folder.id, { name })
+      onRenamed(folder.id, name)
+      setEditing(false)
     } finally {
-      setSaving(false);
+      setLoading(false)
     }
   }
 
-  async function handleDelete(e) {
-    e.stopPropagation();
-    if (!window.confirm(`Delete folder "${folder.name}"? Images inside will stay in your library.`)) return;
-    setDeleting(true);
+  const handleDelete = async (e) => {
+    e.stopPropagation()
+    if (!confirm(`Delete folder "${folder.name}"? Images will stay in your library.`)) return
+    setLoading(true)
     try {
-      await folderModel.delete(folder.id);
-      onDeleted(folder.id);
-    } catch (err) {
-      setError(getErrorMessage(err));
-      setDeleting(false);
+      await deleteFolder(folder.id)
+      onDeleted(folder.id)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
     <div
-      className="card p-4 cursor-pointer hover:shadow-md transition-shadow group"
-      onClick={() => !renaming && onClick()}
+      className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4 flex flex-col gap-3 cursor-pointer hover:border-indigo-500 transition"
+      onClick={() => navigate(`/folders/${folder.id}`)}
     >
-      {/* Icon + name row */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0">
-            <FolderOpen size={20} className="text-brand-500" />
-          </div>
+      <div className="text-3xl">📁</div>
 
-          {renaming ? (
-            <input
-              autoFocus
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") setRenaming(false); }}
-              onClick={(e) => e.stopPropagation()}
-              className="input-base text-sm py-1"
-            />
-          ) : (
-            <div className="min-w-0">
-              <p className="font-medium text-gray-800 truncate">{folder.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {folder.image_count === 0
-                  ? "No images"
-                  : `${folder.image_count} image${folder.image_count !== 1 ? "s" : ""}`}
-              </p>
-            </div>
-          )}
+      {editing ? (
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="flex-1 bg-[#111] border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-indigo-500"
+          />
+          <button
+            onClick={handleRename}
+            disabled={loading}
+            className="text-xs bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-lg text-white"
+          >
+            Save
+          </button>
         </div>
-
-        {/* Action buttons */}
-        <div
-          className="flex gap-1 flex-shrink-0"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {renaming ? (
-            <>
-              <button
-                onClick={handleRename}
-                disabled={saving}
-                className="p-1.5 rounded hover:bg-green-50 text-green-600 transition-colors"
-              >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              </button>
-              <button
-                onClick={() => { setRenaming(false); setNewName(folder.name); }}
-                className="p-1.5 rounded hover:bg-gray-100 text-gray-400 transition-colors"
-              >
-                <X size={14} />
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setRenaming(true)}
-                title="Rename"
-                className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-all"
-              >
-                <Pencil size={14} />
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                title="Delete"
-                className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-              >
-                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <p className="text-xs text-red-500 mt-2">{error}</p>
+      ) : (
+        <p className="text-white font-medium truncate">{folder.name}</p>
       )}
+
+      <p className="text-xs text-gray-500">{folder.image_count ?? 0} images</p>
+
+      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={() => setEditing(!editing)}
+          className="text-xs text-gray-400 hover:text-white transition"
+        >
+          ✏ Rename
+        </button>
+        <button
+          onClick={handleDelete}
+          className="text-xs text-red-400 hover:text-red-300 transition ml-auto"
+        >
+          🗑 Delete
+        </button>
+      </div>
     </div>
-  );
+  )
 }

@@ -1,42 +1,30 @@
-import { createContext, useContext, useState, useCallback } from "react";
-import { userModel } from "../models/userModel";
+import { createContext, useContext, useState } from 'react'
 
-const AuthContext = createContext(null);
+const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem("pv_token"));
-  const [user, setUser]   = useState(() => {
-    try { return JSON.parse(localStorage.getItem("pv_user")); } catch { return null; }
-  });
+  const [token, setToken] = useState(localStorage.getItem('token') || null)
+  const [email, setEmail] = useState(localStorage.getItem('email') || null)
 
-  const login = useCallback(async (email, password) => {
-    const data = await userModel.login(email, password);
-    localStorage.setItem("pv_token", data.token);
-    localStorage.setItem("pv_user", JSON.stringify({ email: data.email }));
-    setToken(data.token);
-    setUser({ email: data.email });
-  }, []);
+  const login = (token, email) => {
+    localStorage.setItem('token', token)
+    localStorage.setItem('email', email)
+    setToken(token)
+    setEmail(email)
+  }
 
-  const register = useCallback(async (email, password) => {
-    const data = await userModel.register(email, password);
-    localStorage.setItem("pv_token", data.token);
-    localStorage.setItem("pv_user", JSON.stringify({ email: data.email }));
-    setToken(data.token);
-    setUser({ email: data.email });
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem("pv_token");
-    localStorage.removeItem("pv_user");
-    setToken(null);
-    setUser(null);
-  }, []);
+  const logout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('email')
+    setToken(null)
+    setEmail(null)
+  }
 
   return (
-    <AuthContext.Provider value={{ token, user, login, register, logout, isLoggedIn: !!token }}>
+    <AuthContext.Provider value={{ token, email, login, logout, isLoggedIn: !!token }}>
       {children}
     </AuthContext.Provider>
-  );
+  )
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext)

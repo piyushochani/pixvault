@@ -1,20 +1,20 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
-import IntroPage       from "./pages/IntroPage";
-import OverviewPage    from "./pages/OverviewPage";
-import AllImagesPage   from "./pages/AllImagesPage";
-import FolderPage      from "./pages/FolderPage";
-import RecycleBinPage  from "./pages/RecycleBinPage";
-import Header          from "./components/Header";
+import IntroPage      from "./pages/IntroPage";
+import OverviewPage   from "./pages/OverviewPage";
+import AllImagesPage  from "./pages/AllImagesPage";
+import FolderPage     from "./pages/FoldersPage";
+import RecycleBinPage from "./pages/RecycleBinPage";
+import Header         from "./components/Header";
 
 function ProtectedLayout({ children }) {
   const { isLoggedIn } = useAuth();
   if (!isLoggedIn) return <Navigate to="/" replace />;
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8">
         {children}
       </main>
     </div>

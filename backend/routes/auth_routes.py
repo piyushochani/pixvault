@@ -16,10 +16,12 @@ def register(body: RegisterRequest):
     if users_col.find_one({"email": body.email}):
         raise HTTPException(status_code=400, detail="Email already registered.")
 
+    password_bytes = body.password.encode("utf-8")[:72]
+
     user = {
         "_id": ObjectId(),
         "email": body.email,
-        "password": pwd_ctx.hash(body.password),
+        "password": pwd_ctx.hash(password_bytes),
         "created_at": datetime.now(timezone.utc),
     }
     users_col.insert_one(user)
@@ -30,7 +32,10 @@ def register(body: RegisterRequest):
 @router.post("/login")
 def login(body: LoginRequest):
     user = users_col.find_one({"email": body.email})
-    if not user or not pwd_ctx.verify(body.password, user["password"]):
+
+    password_bytes = body.password.encode("utf-8")[:72]
+
+    if not user or not pwd_ctx.verify(password_bytes, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     token = create_token(str(user["_id"]))

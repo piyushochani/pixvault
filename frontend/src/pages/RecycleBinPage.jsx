@@ -52,10 +52,10 @@ export default function RecycleBinPage() {
   }
 
   return (
-    <div className="space-y-6 min-h-screen bg-black p-6 rounded-xl">
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Recycle Bin</h1>
+        <h1 className="text-2xl font-bold white">Recycle Bin</h1>
         <p className="text-gray-500 text-sm mt-1">
           Deleted images are kept here for 24 hours before being permanently removed.
         </p>
@@ -72,10 +72,10 @@ export default function RecycleBinPage() {
           <Loader2 size={28} className="animate-spin text-brand-500" />
         </div>
       ) : items.length === 0 ? (
-        <div className="bg-[#111] border border-white/10 rounded-xl p-16 text-center">
+        <div className="card p-16 text-center">
           <Trash2 size={48} className="text-gray-200 mx-auto mb-4" />
-          <p className="text-white/50 font-medium text-lg">Recycle bin is empty</p>
-          <p className="text-white/30 text-sm mt-2">
+          <p className="text-gray-500 font-medium text-lg">Recycle bin is empty</p>
+          <p className="text-gray-400 text-sm mt-2">
             {message || "Deleted images will appear here for 24 hours."}
           </p>
         </div>

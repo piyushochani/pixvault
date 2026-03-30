@@ -1,146 +1,123 @@
-import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { getErrorMessage } from "../utils/helpers";
-import { Images, Search, Sparkles, FolderOpen, Trash2, Download } from "lucide-react";
-
-const FEATURES = [
-  { Icon: Images,     title: "Smart uploads",       desc: "Drag & drop images with AI-generated captions automatically." },
-  { Icon: Sparkles,   title: "Semantic search",      desc: "Describe a photo in plain English — AI finds it visually." },
-  { Icon: Search,     title: "Keyword search",       desc: "Instantly search your own descriptions." },
-  { Icon: FolderOpen, title: "Folder organisation",  desc: "Create folders and organise your library." },
-  { Icon: Trash2,     title: "Recycle bin",          desc: "Deleted images stay recoverable for 24 hours." },
-  { Icon: Download,   title: "Download anytime",     desc: "Download any image in original quality." },
-];
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { login, register } from '../api/auth'
+import { useAuth } from '../context/AuthContext'
 
 export default function IntroPage() {
-  const { login, register } = useAuth();
-  const [mode, setMode]     = useState("login");   // "login" | "signup"
-  const [email, setEmail]   = useState("");
-  const [password, setPass] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState(null);
+  const [mode, setMode]       = useState('landing') // 'landing' | 'login' | 'register'
+  const [email, setEmail]     = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(false)
+  const { login: authLogin }  = useAuth()
+  const navigate              = useNavigate()
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  const handleSubmit = async () => {
+    setError('')
+    setLoading(true)
     try {
-      if (mode === "login") await login(email, password);
-      else await register(email, password);
+      const fn = mode === 'login' ? login : register
+      const res = await fn({ email, password })
+      authLogin(res.data.token, res.data.email)
+      navigate('/overview')
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(err.response?.data?.detail || 'Something went wrong.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-purple-50">
-      {/* Hero */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
-        <div className="flex flex-col lg:flex-row items-center gap-16">
+  if (mode !== 'landing') return (
+    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center px-4">
+      <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-8 w-full max-w-sm flex flex-col gap-4">
+        <h2 className="text-2xl font-bold text-white text-center">
+          {mode === 'login' ? 'Welcome back' : 'Create account'}
+        </h2>
 
-          {/* Left: hero text */}
-          <div className="flex-1 text-center lg:text-left space-y-6">
-            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-3 py-1.5 rounded-full text-sm font-medium">
-              <Sparkles size={14} /> AI-powered image management
-            </div>
-            <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 leading-tight">
-              Your images,<br />
-              <span className="text-brand-500">intelligently organised.</span>
-            </h1>
-            <p className="text-lg text-gray-500 max-w-lg leading-relaxed">
-              Upload photos, let AI describe them, then find any image just by
-              describing what you remember — no manual tagging needed.
-            </p>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          className="bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+          className="bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+        />
 
-            {/* Features grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-              {FEATURES.map(({ Icon, title, desc }) => (
-                <div key={title} className="flex items-start gap-3 text-left">
-                  <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Icon size={15} className="text-brand-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800 text-sm">{title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        {error && <p className="text-red-400 text-xs text-center">{error}</p>}
 
-          {/* Right: auth card */}
-          <div className="w-full max-w-sm flex-shrink-0">
-            <div className="card p-8 shadow-xl">
-              {/* Logo */}
-              <div className="flex items-center justify-center gap-2 mb-6">
-                <Images size={24} className="text-brand-500" />
-                <span className="text-xl font-bold text-gray-900">PixVault</span>
-              </div>
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-2.5 rounded-lg font-medium text-sm"
+        >
+          {loading ? 'Please wait...' : mode === 'login' ? 'Login' : 'Register'}
+        </button>
 
-              {/* Tab toggle */}
-              <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
-                {["login", "signup"].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => { setMode(m); setError(null); }}
-                    className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors capitalize ${
-                      mode === m
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {m === "login" ? "Log in" : "Sign up"}
-                  </button>
-                ))}
-              </div>
+        <p className="text-center text-sm text-gray-400">
+          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <button
+            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+            className="text-indigo-400 hover:underline"
+          >
+            {mode === 'login' ? 'Register' : 'Login'}
+          </button>
+        </p>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="input-base"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={password}
-                    onChange={(e) => setPass(e.target.value)}
-                    placeholder="••••••••"
-                    className="input-base"
-                  />
-                </div>
-
-                {error && (
-                  <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary w-full mt-2"
-                >
-                  {loading
-                    ? "Please wait…"
-                    : mode === "login" ? "Log in" : "Get started"}
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
+        <button onClick={() => setMode('landing')} className="text-xs text-gray-600 hover:text-gray-400 text-center">
+          ← Back
+        </button>
       </div>
     </div>
-  );
+  )
+
+  return (
+    <div className="min-h-screen bg-[#0f0f0f] flex flex-col items-center justify-center px-6 text-center gap-10">
+      {/* Hero */}
+      <div className="flex flex-col items-center gap-4">
+        <h1 className="text-5xl font-bold text-white">
+          Pix<span className="text-indigo-400">Vault</span>
+        </h1>
+        <p className="text-gray-400 text-lg max-w-xl">
+          AI-powered image management. Upload photos, generate descriptions, and search your library using natural language.
+        </p>
+        <button
+          onClick={() => setMode('register')}
+          className="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-semibold text-base transition"
+        >
+          Get Started
+        </button>
+        <button
+          onClick={() => setMode('login')}
+          className="text-sm text-gray-400 hover:text-white transition"
+        >
+          Already have an account? Login →
+        </button>
+      </div>
+
+      {/* Features grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-2xl w-full">
+        {[
+          { icon: '🖼️', title: 'Smart Upload',      desc: 'AI generates descriptions automatically' },
+          { icon: '🔍', title: 'Semantic Search',   desc: 'Find images by describing them naturally' },
+          { icon: '📁', title: 'Folder Organiser',  desc: 'Group your images into folders' },
+          { icon: '🤖', title: 'AI Chatbot',        desc: 'Ask questions about your photo library' },
+          { icon: '🗑️', title: 'Recycle Bin',       desc: 'Restore deleted images within 24 hours' },
+          { icon: '☁️', title: 'Cloud Storage',     desc: 'All images stored securely on Cloudinary' },
+        ].map((f) => (
+          <div key={f.title} className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4 text-left">
+            <div className="text-2xl mb-2">{f.icon}</div>
+            <p className="text-white font-medium text-sm">{f.title}</p>
+            <p className="text-gray-500 text-xs mt-1">{f.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
