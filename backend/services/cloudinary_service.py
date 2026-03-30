@@ -1,15 +1,31 @@
-from pymongo import MongoClient
-from config import MONGO_URI
+import cloudinary
+import cloudinary.uploader
+from config import CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 
-client = MongoClient(MONGO_URI)
-db = client["pixvault"]
+cloudinary.config(
+    cloud_name=CLOUDINARY_CLOUD_NAME,
+    api_key=CLOUDINARY_API_KEY,
+    api_secret=CLOUDINARY_API_SECRET,
+)
 
-users_col = db["users"]
-images_col = db["images"]
-folders_col = db["folders"]
+def upload_image(image_bytes: bytes, public_id: str) -> dict:
+    """
+    Upload image bytes to Cloudinary.
+    Returns dict with 'url' and 'public_id'.
+    """
+    result = cloudinary.uploader.upload(
+        image_bytes,
+        public_id=public_id,
+        overwrite=True,
+        resource_type="image",
+    )
+    return {
+        "url": result["secure_url"],
+        "public_id": result["public_id"],
+    }
 
-# Indexes for fast lookup
-users_col.create_index("email", unique=True)
-images_col.create_index("user_id")
-images_col.create_index("folder_id")
-folders_col.create_index("user_id")
+def delete_image(public_id: str) -> None:
+    """
+    Permanently delete an image from Cloudinary by its public_id.
+    """
+    cloudinary.uploader.destroy(public_id, resource_type="image")
