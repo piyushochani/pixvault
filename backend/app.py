@@ -61,7 +61,7 @@ app.include_router(auth_router,    prefix="/api")
 app.include_router(image_router,   prefix="/api")
 app.include_router(folder_router,  prefix="/api")
 app.include_router(search_router,  prefix="/api")
-app.include_router(recycle_router, prefix="/api")
+app.include_router(recycle_router, prefix="/api/recycle")
 app.include_router(chat_router,    prefix="/api")
 
 

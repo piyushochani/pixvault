@@ -4,7 +4,6 @@ import { folderImages } from '../api/folders'
 import Header from '../components/Header'
 import ImageCard from '../components/ImageCard'
 import ImageModal from '../components/ImageModal'
-import ChatBot from './components/ChatBot'
 
 export default function FolderViewPage() {
   const { id } = useParams()

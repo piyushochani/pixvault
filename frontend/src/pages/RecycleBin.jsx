@@ -1,24 +1,22 @@
 import { useState, useEffect } from "react";
 import { Trash2, RotateCcw, X, Loader2, Clock } from "lucide-react";
 import { recycleBinModel } from "../models/recycleBinModel";
-import { formatCountdown, formatDate, getErrorMessage } from "../utils/helpers";
+import { formatCountdown, formatDate } from "../utils/helpers";
 
 export default function RecycleBinPage() {
-  const [items, setItems]     = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
-  const [message, setMessage] = useState(null);
-  const [actionId, setActionId] = useState(null);   // id currently being acted on
+  const [items, setItems]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [message, setMessage]   = useState(null);
+  const [actionId, setActionId] = useState(null);
 
   async function load() {
     setLoading(true);
-    setError(null);
     try {
       const data = await recycleBinModel.list();
       setItems(data.results || []);
       setMessage(data.message || null);
     } catch (err) {
-      setError(getErrorMessage(err));
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -32,7 +30,7 @@ export default function RecycleBinPage() {
       await recycleBinModel.restore(imageId);
       setItems((prev) => prev.filter((i) => i.image_id !== imageId));
     } catch (err) {
-      setError(getErrorMessage(err));
+      console.error(err);
     } finally {
       setActionId(null);
     }
@@ -45,7 +43,7 @@ export default function RecycleBinPage() {
       await recycleBinModel.permanentDelete(imageId);
       setItems((prev) => prev.filter((i) => i.image_id !== imageId));
     } catch (err) {
-      setError(getErrorMessage(err));
+      console.error(err);
     } finally {
       setActionId(null);
     }
@@ -60,12 +58,6 @@ export default function RecycleBinPage() {
           Deleted images are kept here for 24 hours before being permanently removed.
         </p>
       </div>
-
-      {error && (
-        <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
-          {error}
-        </p>
-      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-48">

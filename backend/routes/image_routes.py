@@ -40,11 +40,11 @@ async def upload(
         raise HTTPException(400, "File too large. Maximum size is 10 MB.")
 
     clean_desc = sanitise_user_description(user_description or "")
+    ai_result = process_uploaded_image(image_bytes, user_description=clean_desc)
 
     image_id = str(ObjectId())
     cloud_result = upload_image(image_bytes, public_id=image_id)
 
-    ai_result = process_uploaded_image(image_bytes)
 
     doc = {
         "_id": ObjectId(image_id),
@@ -60,7 +60,7 @@ async def upload(
     }
     images_col.insert_one(doc)
 
-    if ai_result["ai_ok"] and ai_result["embedding"]:
+    if ai_result.get("embedding"):
         upsert_vector(
             image_id=image_id,
             embedding=ai_result["embedding"],

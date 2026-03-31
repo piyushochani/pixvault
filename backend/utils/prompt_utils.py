@@ -34,7 +34,7 @@ _HALLUCINATION_PHRASES = [
 _MIN_CAPTION_LENGTH = 8
 
 # ── Maximum stored description length ────────────────────────────────────────
-_MAX_DESCRIPTION_LENGTH = 300
+_MAX_DESCRIPTION_LENGTH = 1000
 
 
 def sanitise_caption(raw_caption: str) -> Optional[str]:

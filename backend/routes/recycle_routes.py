@@ -35,25 +35,21 @@ def _build_item(doc: dict) -> dict:
 
 
 def _purge_expired(user_id: str):
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=AUTO_DELETE_HOURS)
-    expired = list(
-        images_col.find(
-            {
-                "user_id": ObjectId(user_id),
-                "deleted": True,
-                "deleted_at": {"$lt": cutoff},
-            }
-        )
-    )
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    expired = list(images_col.find({
+        "user_id": ObjectId(user_id),
+        "deleted": True,
+        "deleted_at": {"$lt": cutoff},
+    }))
     for img in expired:
-        delete_image(img["cloudinary_public_id"])
-        delete_vector(str(img["_id"]))
+        try:
+            delete_vector(str(img["_id"]))
+        except Exception as e:
+            print(f"[Recycle] Pinecone delete skipped: {e}")
         images_col.delete_one({"_id": img["_id"]})
 
-    if expired:
-        print(f"[RecycleBin] Purged {len(expired)} expired image(s) for user {user_id}.")
 
-
+        
 @router.get("/bin")
 def get_recycle_bin(user_id: str = Depends(get_current_user)):
     _purge_expired(user_id)

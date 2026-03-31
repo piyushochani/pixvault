@@ -1,12 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
-import IntroPage      from "./pages/IntroPage";
-import OverviewPage   from "./pages/OverviewPage";
-import AllImagesPage  from "./pages/AllImagesPage";
-import FolderPage     from "./pages/FoldersPage";
-import RecycleBinPage from "./pages/RecycleBinPage";
-import Header         from "./components/Header";
+import IntroPage        from "./pages/IntroPage";
+import OverviewPage     from "./pages/OverviewPage";
+import AllImagesPage    from "./pages/AllImagesPage";
+import FolderPage       from "./pages/FoldersPage";
+import FolderDetailPage from "./pages/FolderViewPage";
+import RecycleBinPage   from "./pages/RecycleBinPage";
+import Header           from "./components/Header";
+
 
 function ProtectedLayout({ children }) {
   const { isLoggedIn } = useAuth();
@@ -21,11 +23,13 @@ function ProtectedLayout({ children }) {
   );
 }
 
+
 function PublicRoute({ children }) {
   const { isLoggedIn } = useAuth();
   if (isLoggedIn) return <Navigate to="/overview" replace />;
   return children;
 }
+
 
 export default function App() {
   return (
@@ -43,6 +47,9 @@ export default function App() {
           } />
           <Route path="/folders" element={
             <ProtectedLayout><FolderPage /></ProtectedLayout>
+          } />
+          <Route path="/folders/:folderId" element={
+            <ProtectedLayout><FolderDetailPage /></ProtectedLayout>
           } />
           <Route path="/recycle" element={
             <ProtectedLayout><RecycleBinPage /></ProtectedLayout>

@@ -16,10 +16,17 @@ def _image_part(image_bytes: bytes, mime_type: str = "image/jpeg"):
 
 def generate_image_description(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
     prompt = (
-        "Describe this image in rich detail for semantic search indexing. "
-        "Include: subject matter, colors, mood, setting, objects, people (if any), "
-        "style, and any text visible. If it's an animal, include species, breed, "
-        "and distinguishing features. Be thorough but concise (3-5 sentences)."
+        "You are analyzing an image for a photo library. "
+        "Provide a rich, detailed description covering: "
+        "1) Main subject (what/who is in the image), "
+        "2) Brand names, model names, logos, or text visible, "
+        "3) Colors, materials, finish (matte/glossy etc), "
+        "4) Key components, parts, or features visible, "
+        "5) Setting or background context, "
+        "6) All colors present in the image in detail, "
+        "7) Genre of the image, for example sports, cricket, football, wildlife, birds, cars, sky, water body, lake, beach, cycling, etc. "
+        "Be specific — mention exact details like brand names, colors, and components. "
+        "Write 5-6 sentences. Do not use bullet points."
     )
     response = client.models.generate_content(
         model=GEMINI_MODEL,

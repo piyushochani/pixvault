@@ -1,73 +1,55 @@
 from services.blip_service import generate_caption
 from services.clip_service import get_image_embedding, get_text_embedding
-from services.gemini_service import generate_image_description
+from services.groq_service import generate_image_description as groq_describe
+from services.gemini_service import generate_image_description as gemini_describe
 from utils.prompt_utils import sanitise_caption, validate_search_query
 
 
-def process_uploaded_image(image_bytes: bytes) -> dict:
-    """
-    Full AI pipeline for a newly uploaded image.
+def process_uploaded_image(image_bytes: bytes, user_description: str = "") -> dict:
+    # Step 1: CLIP embedding
+    embedding = get_image_embedding(image_bytes)
 
-    Returns a dict:
-    {
-        "ai_description": str | None,   # best available caption/description
-        "embedding":       list[float], # 512-dim CLIP vector
-        "ai_ok":           bool,        # False if embedding failed
-    }
-    """
-
-    # ── Step 1: BLIP caption ──────────────────────────────────────────────────
-    raw_caption = None
+    # Step 2: Groq → Gemini → BLIP fallback chain
+    ai_description = None
     try:
-        raw_caption = generate_caption(image_bytes)
+        ai_description = groq_describe(image_bytes)
+        print("[AI Pipeline] Groq description generated.")
     except Exception as e:
-        print(f"[AI Pipeline] BLIP caption failed: {e}")
-
-    clean_caption = sanitise_caption(raw_caption) if raw_caption else None
-
-    # ── Step 2: Gemini fallback (only if BLIP returned nothing usable) ────────
-    ai_description = clean_caption  # prefer BLIP — it's local and free
-    if not ai_description:
+        print(f"[AI Pipeline] Groq failed, trying Gemini: {e}")
         try:
-            gemini_desc = generate_image_description(image_bytes)
-            ai_description = gemini_desc if gemini_desc else None
-            print("[AI Pipeline] Used Gemini fallback for description.")
-        except Exception as e:
-            print(f"[AI Pipeline] Gemini description failed: {e}")
-            ai_description = None
+            ai_description = gemini_describe(image_bytes)
+            print("[AI Pipeline] Gemini description generated.")
+        except Exception as e2:
+            print(f"[AI Pipeline] Gemini failed, falling back to BLIP: {e2}")
+            try:
+                blip_caption = generate_caption(image_bytes)
+                ai_description = sanitise_caption(blip_caption)
+                print("[AI Pipeline] BLIP caption generated.")
+            except Exception as e3:
+                print(f"[AI Pipeline] All AI services failed: {e3}")
+                ai_description = None
 
-    # ── Step 3: CLIP embedding ────────────────────────────────────────────────
-    embedding = []
-    try:
-        embedding = get_image_embedding(image_bytes)
-    except Exception as e:
-        print(f"[AI Pipeline] CLIP embedding failed: {e}")
-
-    ai_ok = bool(embedding)  # pipeline is usable as long as embedding succeeded
+    # Step 3: Merge user description + AI description
+    parts = []
+    if user_description and user_description.strip():
+        parts.append(user_description.strip())
+    if ai_description and ai_description.strip():
+        parts.append(ai_description.strip())
+    combined_description = " | ".join(parts) if parts else None
 
     return {
-        "ai_description": ai_description,
+        "ai_description": combined_description,
         "embedding": embedding,
-        "ai_ok": ai_ok,
     }
 
 
 def embed_search_query(query: str) -> tuple[list[float], str | None]:
-    """
-    Validate and embed a user's semantic search query using CLIP text encoder.
-
-    Used by search_routes.py for the /search/semantic endpoint.
-
-    Returns:
-        (embedding, None)          on success
-        ([], error_message_str)    on failure
-    """
     is_valid, result = validate_search_query(query)
     if not is_valid:
-        return [], result  # result is the error message when invalid
+        return [], result
 
     try:
-        embedding = get_text_embedding(result)  # result is the cleaned query string
+        embedding = get_text_embedding(result)
         if not embedding:
             return [], "Failed to generate embedding. Please try again."
         return embedding, None

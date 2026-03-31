@@ -29,7 +29,7 @@ def get_image_embedding(image_bytes: bytes) -> list[float]:
         inputs = _processor(images=image, return_tensors="pt")
         with torch.no_grad():
             features = _model.get_image_features(**inputs)
-            features = features / features.norm(dim=-1, keepdim=True)
+            features = features / features.norm(p=2, dim=-1, keepdim=True)
         return features[0].tolist()
     except Exception as e:
         print(f"[CLIP] Image embedding error: {e}")
@@ -45,8 +45,8 @@ def get_text_embedding(text: str) -> list[float]:
     try:
         inputs = _processor(text=[text], return_tensors="pt", padding=True, truncation=True)
         with torch.no_grad():
-            features = _model.get_text_features(**inputs)
-            features = features / features.norm(dim=-1, keepdim=True)
+            features = _model.get_image_features(**inputs)
+            features = features / features.norm(p=2, dim=-1, keepdim=True)
         return features[0].tolist()
     except Exception as e:
         print(f"[CLIP] Text embedding error: {e}")
