@@ -1,53 +1,68 @@
-from pinecone import Pinecone, ServerlessSpec
-from config import PINECONE_API_KEY, PINECONE_INDEX_NAME, PINECONE_DIMENSION
+"""
+pinecone_service.py — PixVault
+--------------------------------
+Pinecone index using 384-dim sentence-transformer vectors.
+"""
 
-# Initialise Pinecone client
-pc = Pinecone(api_key=PINECONE_API_KEY)
+from pinecone import Pinecone, ServerlessSpec
+import os
+
+_index = None
+INDEX_NAME = "pixvault-descriptions"
+EMBED_DIM  = 384
 
 
 def init_pinecone_index():
-    """Create index if it does not exist yet."""
-    existing = [idx.name for idx in pc.list_indexes()]
-    if PINECONE_INDEX_NAME not in existing:
+    global _index
+    pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
+
+    existing = [i.name for i in pc.list_indexes()]
+    if INDEX_NAME not in existing:
         pc.create_index(
-            name=PINECONE_INDEX_NAME,
-            dimension=PINECONE_DIMENSION,
+            name=INDEX_NAME,
+            dimension=EMBED_DIM,
             metric="cosine",
             spec=ServerlessSpec(cloud="aws", region="us-east-1"),
         )
-        print(f"[Pinecone] Created index '{PINECONE_INDEX_NAME}'")
-    else:
-        print(f"[Pinecone] Index '{PINECONE_INDEX_NAME}' already exists")
+        print(f"[Pinecone] Created index '{INDEX_NAME}' (dim={EMBED_DIM})")
+
+    _index = pc.Index(INDEX_NAME)
+    print(f"[Pinecone] Connected to '{INDEX_NAME}'")
 
 
 def get_index():
-    return pc.Index(PINECONE_INDEX_NAME)
+    if _index is None:
+        raise RuntimeError("Pinecone not initialised. Call init_pinecone_index() first.")
+    return _index
 
 
+# ── used in image_routes.py ────────────────────────────────────────────────────
 def upsert_vector(image_id: str, embedding: list[float], metadata: dict):
-    """Store or update a vector for an image."""
-    index = get_index()
-    index.upsert(vectors=[{"id": image_id, "values": embedding, "metadata": metadata}])
+    get_index().upsert(vectors=[{
+        "id":       image_id,
+        "values":   embedding,
+        "metadata": metadata,
+    }])
 
 
 def query_vectors(embedding: list[float], user_id: str, top_k: int = 20) -> list[dict]:
-    """
-    Find the most similar images for a given embedding.
-    Filters strictly to the requesting user's images only.
-    Returns list of {image_id, score}.
-    """
-    index = get_index()
-    results = index.query(
+    results = get_index().query(
         vector=embedding,
         top_k=top_k,
-        filter={"user_id": {"$eq": user_id}},
         include_metadata=True,
+        filter={"user_id": {"$eq": user_id}},
     )
     matches = results.get("matches", [])
-    return [{"image_id": m["id"], "score": m["score"]} for m in matches if m["score"] > 0.25]
+    return [
+        {
+            "image_id": m["id"],
+            "score":    m["score"],
+            "metadata": m.get("metadata", {}),
+        }
+        for m in matches
+        if m["score"] >= 0.3   # ✅ filter weak matches at source
+    ]
 
 
-def delete_vector(image_id: str):
-    """Remove a vector from Pinecone when an image is permanently deleted."""
-    index = get_index()
-    index.delete(ids=[image_id])
+def delete_image_vector(image_id: str):
+    get_index().delete(ids=[image_id])

@@ -30,9 +30,10 @@ async def lifespan(app: FastAPI):
     from services.blip_service import _load as blip_load
     blip_load()
 
-    print("[Startup] Pre-loading CLIP model...")
-    from services.clip_service import _load as clip_load
-    clip_load()
+    # CLIP removed — replaced by sentence-transformer for semantic search
+    print("[Startup] Pre-loading sentence-transformer embedding model...")
+    from services.embedding_service import _load as embedding_load
+    embedding_load()
 
     print("[Startup] All services ready. PixVault is running.")
     yield

@@ -45,7 +45,7 @@ def get_text_embedding(text: str) -> list[float]:
     try:
         inputs = _processor(text=[text], return_tensors="pt", padding=True, truncation=True)
         with torch.no_grad():
-            features = _model.get_image_features(**inputs)
+            features = _model.get_text_features(**inputs)  # ← FIXED: was get_image_features
             features = features / features.norm(p=2, dim=-1, keepdim=True)
         return features[0].tolist()
     except Exception as e:

@@ -1,15 +1,14 @@
 from services.blip_service import generate_caption
-from services.clip_service import get_image_embedding, get_text_embedding
 from services.groq_service import generate_image_description as groq_describe
 from services.gemini_service import generate_image_description as gemini_describe
+from services.embedding_service import embed_text
+from services.description_parser import parse_description
 from utils.prompt_utils import sanitise_caption, validate_search_query
 
 
 def process_uploaded_image(image_bytes: bytes, user_description: str = "") -> dict:
-    # Step 1: CLIP embedding
-    embedding = get_image_embedding(image_bytes)
 
-    # Step 2: Groq → Gemini → BLIP fallback chain
+    # Step 1: Groq → Gemini → BLIP fallback chain
     ai_description = None
     try:
         ai_description = groq_describe(image_bytes)
@@ -29,7 +28,7 @@ def process_uploaded_image(image_bytes: bytes, user_description: str = "") -> di
                 print(f"[AI Pipeline] All AI services failed: {e3}")
                 ai_description = None
 
-    # Step 3: Merge user description + AI description
+    # Step 2: Merge user description + AI description
     parts = []
     if user_description and user_description.strip():
         parts.append(user_description.strip())
@@ -37,9 +36,35 @@ def process_uploaded_image(image_bytes: bytes, user_description: str = "") -> di
         parts.append(ai_description.strip())
     combined_description = " | ".join(parts) if parts else None
 
+    # Step 3: Parse for metadata + embed FULL description (not just keywords)
+    embedding = []
+    embed_summary = None
+    parsed_meta = {}
+
+    if combined_description:
+        parsed = parse_description(combined_description)
+        embed_summary = parsed["embed_summary"]
+        parsed_meta = {
+            "mood":    parsed["mood"],
+            "colors":  parsed["colors"],
+            "setting": parsed["setting"],
+            "rating":  parsed["technical"].get("rating", ""),
+        }
+        try:
+            # ✅ Embed full description — preserves meaning, not just keywords
+            # Cap at 512 chars to stay within token limits safely
+            embed_input = combined_description[:512]
+            embedding = embed_text(embed_input)
+            print("[AI Pipeline] Sentence-transformer embedding generated.")
+        except Exception as e:
+            print(f"[AI Pipeline] Embedding failed: {e}")
+            embedding = []
+
     return {
-        "ai_description": combined_description,
-        "embedding": embedding,
+        "ai_description": combined_description,   # full text → MongoDB
+        "embed_summary":  embed_summary,           # keywords → Pinecone metadata
+        "embedding":      embedding,               # 384-dim vector → Pinecone
+        "parsed_meta":    parsed_meta,             # mood, colors, rating etc.
     }
 
 
@@ -49,7 +74,9 @@ def embed_search_query(query: str) -> tuple[list[float], str | None]:
         return [], result
 
     try:
-        embedding = get_text_embedding(result)
+        # ✅ Embed full natural language query — no stripping, preserves meaning
+        # "show me someone who fell" correctly matches "dropped", "crashed" etc.
+        embedding = embed_text(result)
         if not embedding:
             return [], "Failed to generate embedding. Please try again."
         return embedding, None
