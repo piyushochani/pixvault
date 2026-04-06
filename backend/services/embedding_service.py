@@ -1,30 +1,27 @@
 """
 embedding_service.py — PixVault
 --------------------------------
-Sentence-transformer based text embedder.
-Replaces CLIP for all semantic search operations.
+Gemini-based text embedder.
+Replaces sentence-transformers (all-MiniLM-L6-v2) for Vercel compatibility.
+Output dimension: 768 (text-embedding-004)
 """
 
-from sentence_transformers import SentenceTransformer
+import os
+import google.generativeai as genai
 
-_model: SentenceTransformer | None = None
-EMBED_DIM = 384   # all-MiniLM-L6-v2 output dimension
+EMBED_DIM = 768  # text-embedding-004 output dimension
 
-
-def _load() -> SentenceTransformer:
-    global _model
-    if _model is None:
-        print("[EmbeddingService] Loading all-MiniLM-L6-v2...")
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-        print("[EmbeddingService] Model ready.")
-    return _model
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 
 def embed_text(text: str) -> list[float]:
     """
-    Embed any text string into a 384-dim vector.
+    Embed any text string into a 768-dim vector.
     Used for BOTH description embed_summary (upload) AND user query (search).
     """
-    model = _load()
-    vector = model.encode(text, normalize_embeddings=True)
-    return vector.tolist()
+    result = genai.embed_content(
+        model="models/text-embedding-004",
+        content=text,
+        task_type="RETRIEVAL_DOCUMENT"
+    )
+    return result["embedding"]
