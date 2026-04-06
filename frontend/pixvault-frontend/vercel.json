@@ -1,13 +1,6 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "framework": "vite",
-      "entrypoint": "frontend/pixvault-frontend",
-      "routePrefix": "/"
-    },
-    "backend": {
-      "entrypoint": "backend",
-      "routePrefix": "/api"
-    }
-  }
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install"
 }
