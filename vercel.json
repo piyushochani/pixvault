@@ -1,13 +1,13 @@
 {
   "experimentalServices": {
     "frontend": {
-      "framework": "other",
-      "entrypoint": "frontend",
+      "framework": "vite",
+      "entrypoint": "frontend/pixvault-frontend",
       "routePrefix": "/"
     },
     "backend": {
       "entrypoint": "backend",
-      "routePrefix": "/_/backend"
+      "routePrefix": "/api"
     }
   }
 }
