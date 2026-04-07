@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 # Internal — auth & services
 from middleware.auth_middleware import get_current_user
-from services.clip_service import get_text_embedding
+from services.embedding_service import get_text_embedding
 from services.pinecone_service import query_vectors
 from services.gemini_service import (
     answer_image_question,
