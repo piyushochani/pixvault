@@ -2,7 +2,7 @@
 app.py — PixVault Backend Entry Point
 --------------------------------------
 Starts FastAPI, registers all routers, initialises third-party services
-(MongoDB indexes, Pinecone index), and loads AI models on startup.
+(MongoDB indexes, Pinecone index) on startup.
 """
 
 from fastapi import FastAPI
@@ -25,15 +25,6 @@ async def lifespan(app: FastAPI):
     # ── Startup ────────────────────────────────────────────────────────────
     print("[Startup] Initialising Pinecone index...")
     init_pinecone_index()
-
-    print("[Startup] Pre-loading BLIP model...")
-    from services.blip_service import _load as blip_load
-    blip_load()
-
-    # CLIP removed — replaced by sentence-transformer for semantic search
-    print("[Startup] Pre-loading sentence-transformer embedding model...")
-    from services.embedding_service import _load as embedding_load
-    embedding_load()
 
     print("[Startup] All services ready. PixVault is running.")
     yield
