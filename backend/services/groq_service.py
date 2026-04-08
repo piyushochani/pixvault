@@ -2,7 +2,7 @@ import os
 import base64
 from groq import Groq
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+_client = None
 MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 PROMPT = """Analyze this image thoroughly and write a detailed, flowing paragraph description. Cover the following naturally in your prose without using bullet points or numbered lists:
@@ -18,10 +18,17 @@ Try to include everything in short.
 """
 
 
+def get_groq_client() -> Groq:
+    global _client
+    if _client is None:
+        _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    return _client
+
+
 def generate_image_description(image_bytes: bytes) -> str:
     try:
         base64_image = base64.b64encode(image_bytes).decode("utf-8")
-        response = client.chat.completions.create(
+        response = get_groq_client().chat.completions.create(
             model=MODEL,
             messages=[{
                 "role": "user",
