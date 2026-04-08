@@ -8,11 +8,13 @@ cloudinary.config(
     api_secret=CLOUDINARY_API_SECRET,
 )
 
+
 def upload_image(image_bytes: bytes, public_id: str) -> dict:
     """
     Upload image bytes to Cloudinary.
     Returns dict with 'url' and 'public_id'.
     """
+
     result = cloudinary.uploader.upload(
         image_bytes,
         public_id=public_id,
