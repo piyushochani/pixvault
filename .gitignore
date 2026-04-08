@@ -30,16 +30,16 @@ ENV/
 .env/
 pipenv/
 
-# ── AI Model Cache (BLIP + CLIP — can be GBs in size) ────────────────────────
-.cache/
-~/.cache/huggingface/
-huggingface/
-models/
+# ✅ Replace with specific AI model file extensions only
 *.bin
 *.safetensors
 *.pt
 *.pth
 *.ckpt
+.cache/
+~/.cache/huggingface/
+huggingface/
+
 
 # ── Node / React Frontend ─────────────────────────────────────────────────────
 node_modules/
