@@ -45,7 +45,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://pixvault-f3ax-ap0r1rayg-piyush-ochanis-projects.vercel.app/"        # allows any Vercel domain temporarily
+        "https://pixvault-frontend-pej3x552h-piyush-ochanis-projects.vercel.app/"        # allows any Vercel domain temporarily
     ],
     allow_credentials=True,
     allow_methods=["*"],
