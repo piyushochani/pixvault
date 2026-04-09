@@ -39,19 +39,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
 # ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://pixvault-frontend-pej3x552h-piyush-ochanis-projects.vercel.app/"        # allows any Vercel domain temporarily
+        "https://pixvault-frontend-pej3x552h-piyush-ochanis-projects.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # ── Routers ────────────────────────────────────────────────────────────────────
 app.include_router(auth_router,    prefix="/api")
 app.include_router(image_router,   prefix="/api")
